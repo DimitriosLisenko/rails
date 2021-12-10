@@ -43,6 +43,20 @@ module ActiveSupport #:nodoc:
         end
       end
 
+      def start_executor_running
+        @lock.start_sharing(exclusive_priority: false)
+      end
+
+      def done_executor_running
+        @lock.stop_sharing
+      end
+
+      def executor_running
+        @lock.sharing(exclusive_priority: false) do
+          yield
+        end
+      end
+
       def permit_concurrent_loads
         @lock.yield_shares(compatible: [:load]) do
           yield
