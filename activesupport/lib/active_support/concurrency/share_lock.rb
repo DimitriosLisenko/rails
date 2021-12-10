@@ -156,8 +156,8 @@ module ActiveSupport
       end
 
       # Execute the supplied block while holding the Share lock.
-      def sharing
-        start_sharing
+      def sharing(exclusive_priority: true)
+        start_sharing(exclusive_priority: exclusive_priority)
         begin
           yield
         ensure
