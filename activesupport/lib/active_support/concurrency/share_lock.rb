@@ -111,7 +111,7 @@ module ActiveSupport
         end
       end
 
-      def start_sharing
+      def start_sharing(exclusive_priority: true)
         synchronize do
           if @sharing[Thread.current] > 0 || @exclusive_thread == Thread.current
             # We already hold a lock; nothing to wait for
@@ -122,7 +122,7 @@ module ActiveSupport
           else
             # This is an initial / outermost share call: any outstanding
             # requests for an exclusive lock get to go first
-            wait_for(:start_sharing) { busy_for_sharing?(false) }
+            wait_for(:start_sharing) { busy_for_sharing?(false, exclusive_priority: exclusive_priority) }
           end
           @sharing[Thread.current] += 1
         end
@@ -156,8 +156,8 @@ module ActiveSupport
       end
 
       # Execute the supplied block while holding the Share lock.
-      def sharing
-        start_sharing
+      def sharing(exclusive_priority: true)
+        start_sharing(exclusive_priority: exclusive_priority)
         begin
           yield
         ensure
@@ -202,13 +202,17 @@ module ActiveSupport
       private
         # Must be called within synchronize
         def busy_for_exclusive?(purpose)
-          busy_for_sharing?(purpose) ||
+          busy_for_sharing?(purpose, exclusive_priority: true) ||
             @sharing.size > (@sharing[Thread.current] > 0 ? 1 : 0)
         end
 
-        def busy_for_sharing?(purpose)
+        def busy_for_sharing?(purpose, exclusive_priority:)
           (@exclusive_thread && @exclusive_thread != Thread.current) ||
-            @waiting.any? { |t, (_, c)| t != Thread.current && !c.include?(purpose) }
+            @waiting.any? do |t, (_, c)|
+              compatible = c
+              compatible = compatible | [false] unless exclusive_priority
+              t != Thread.current && !compatible.include?(purpose)
+            end
         end
 
         def eligible_waiters?(compatible)

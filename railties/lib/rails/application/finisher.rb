@@ -156,11 +156,11 @@ module Rails
 
       module InterlockHook
         def self.run
-          ActiveSupport::Dependencies.interlock.start_running
+          ActiveSupport::Dependencies.interlock.start_executor_running
         end
 
         def self.complete(_state)
-          ActiveSupport::Dependencies.interlock.done_running
+          ActiveSupport::Dependencies.interlock.done_executor_running
         end
       end
 
